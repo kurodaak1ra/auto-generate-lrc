@@ -344,7 +344,9 @@ function cleanAdd_2($str, $t_str) {
  */
 function musicKeywordApi($url, $method) {
     $url = $url.'/search?keywords='.$method;
-    $data = json_decode(file_get_contents($url));
+    if (!$data = json_decode(file_get_contents($url))) {
+        die('<p style="color:#fff;background:#ca0000;margin: 5px;padding: 5px;">API Error</p>');
+    }
     if ($data->code == 200) {
         return $data->result;
     } else {
