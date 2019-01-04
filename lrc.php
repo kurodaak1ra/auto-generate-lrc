@@ -189,30 +189,40 @@ $artist_precision = $_POST['artist_precision'] == null ? 80 : (int)$_POST['artis
 $duration_precision = $_POST['duration_precision'] == null ? 5 : ((int)$_POST['duration_precision']);
 
 // 开始运行！！！
-for($i = 0;$i < count($dir);$i++){
+for($i = 0;$i < count($dir);$i++) {
     if (!preg_match("/flac|wav|mp3/i", substr($dir[$i], -4))) {
         continue;
     }
     // 当有歌词文件时跳过
-    if (in_array(preg_split("/.(?=[^.]*$)/", $dir[$i])[0].'.lrc', $dir) && $_POST['overwrite'] == 'ow_n') {
+    if (in_array(preg_split("/.(?=[^.]*$)/", $dir[$i])[0] . '.lrc', $dir) && $_POST['overwrite'] == 'ow_n') {
         continue;
     }
-    $FileInfo = $getID3->analyze($path.$dir[$i]);
+    $search_flag = 1;
+    $FileInfo = $getID3->analyze($path . $dir[$i]);
     $duration = floor($FileInfo['playtime_seconds']);
     $type = $FileInfo['audio']['dataformat'];
     $file_path = $FileInfo['filepath'];
     $file_name = $FileInfo['filename'];
-    if ($type == 'flac') {
-        $music_name = $FileInfo['tags']['vorbiscomment']['title'][0];
-        $album = $FileInfo['tags']['vorbiscomment']['album'][0];
-        $artist = $FileInfo['tags']['vorbiscomment']['artist'][0];
-    } elseif ($type == 'wav' || $type == 'mp3') {
-        $music_name = $FileInfo['tags']['id3v2']['title'][0];
-        $album = $FileInfo['tags']['id3v2']['album'][0];
-        $artist = $FileInfo['tags']['id3v2']['artist'][0];
+    if (isset($FileInfo['tags'])) {
+        if ($type == 'flac') {
+            $music_name = $FileInfo['tags']['vorbiscomment']['title'][0];
+            $album = $FileInfo['tags']['vorbiscomment']['album'][0];
+            $artist = $FileInfo['tags']['vorbiscomment']['artist'][0];
+        } elseif ($type == 'wav' || $type == 'mp3') {
+            $music_name = $FileInfo['tags']['id3v2']['title'][0];
+            $album = $FileInfo['tags']['id3v2']['album'][0];
+            $artist = $FileInfo['tags']['id3v2']['artist'][0];
+        }
     }
+    if (!isset($music_name) || $music_name == null) {
+        $music_name = preg_split("/.(?=[^.]*$)/", $file_name)[0];
+        $music_name = explode('.', $music_name)[1];
+        $music_name = trim($music_name);
+    }
+    $album = isset($album) ? $album : '';
+    $artist = isset($artist) ? $artist : '';
     $opencc_tr = $_POST['opencc'] == 'opencc_on' ? opencc_convert($music_name, $oc) : '';
-    $data_1 = musicKeywordApi($api_url, urlencode($music_name.' '.$album));
+    $data_1 = musicKeywordApi($api_url, urlencode(trim($music_name . ' ' . $album)));
     $data_2 = musicKeywordApi($api_url, urlencode($music_name));
     if (matchMusic($data_1, $artist, $music_name, $duration, $api_url, $file_path, $file_name, $music_name_precision, $artist_precision, $duration_precision, $_POST['debug'])) {
     } elseif (matchMusic($data_2, $artist, $music_name, $duration, $api_url, $file_path, $file_name, $music_name_precision, $artist_precision, $duration_precision, $_POST['debug'])) {
@@ -237,7 +247,7 @@ if ($_POST['opencc'] == 'opencc_on') {
  * @return string 是否成功匹配到了歌曲
  */
 function matchMusic($data, $artist, $music_name, $duration, $url, $path, $file_name, $music_name_precision, $artist_precision, $duration_precision, $debug) {
-    if ($music_name == null) {
+    if ($data == null || $music_name == null) {
         return 0;
     }
     $song = $data->songs;
@@ -269,7 +279,7 @@ function matchMusic($data, $artist, $music_name, $duration, $url, $path, $file_n
         if ($similar_artist >= $artist_precision && $similar_music_name >= $music_name_precision) {
             musicLrcApi($url, $api_music_id, $path, $file_name);
             return 1;
-        } elseif ($similar_music_name >= $music_name_precision && $duration >= $api_duration - $duration_precision && $api_duration <= $duration + $duration_precision) {
+        } elseif ($similar_music_name >= $music_name_precision && $duration >= $api_duration - $duration_precision && $duration <= $api_duration + $duration_precision) {
             musicLrcApi($url, $api_music_id, $path, $file_name);
             return 1;
         }
@@ -347,10 +357,10 @@ function musicKeywordApi($url, $method) {
     if (!$data = json_decode(file_get_contents($url))) {
         die('<p style="color:#fff;background:#ca0000;margin: 5px;padding: 5px;">API Error</p>');
     }
-    if ($data->code == 200) {
+    if ($data->code == 200 && $data->result->songCount != 0) {
         return $data->result;
     } else {
-        return 'null';
+        return null;
     }
 }
 
@@ -368,13 +378,11 @@ function musicLrcApi($url, $id, $path, $file_name) {
         return;
     }
     if (isset($data->lrc)) {
-        if (isset($data->tlyric)) {
-            if ($data->tlyric != null) {
-                $obj['lrc'] = $data->lrc->lyric;
-                $obj['translrc'] = $data->tlyric->lyric;
-            }
+        if (isset($data->tlyric) && isset($data->tlyric->lyric)) {
+            $obj['lrc'] = $data->lrc->lyric;
+            $obj['translrc'] = $data->tlyric->lyric;
         } else {
-            $obj['lyric'] = $data->lrc->lyric;
+            $obj['lrc'] = $data->lrc->lyric;
         }
         generateLrc($obj, $path, $file_name);
     } else {
