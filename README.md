@@ -41,7 +41,7 @@ https://github.com/Binaryify/NeteaseCloudMusicApi<br>
 看教程自己搭建 API<br>
 (网上有个现成的 API，不过貌似做了限制，没办法调用而且还被墙了：https://163.fczbl.vip)
 
-### OpenCC Win 版编译
+### PHP OpenCC Win 版编译
 https://github.com/NauxLiu/opencc4php/pull/16
 
 ### getID3
