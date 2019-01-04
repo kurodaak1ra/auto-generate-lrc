@@ -70,17 +70,18 @@ if (preg_match("/Android|iPhone|IOS/i", $_SERVER['HTTP_USER_AGENT'])) {
         <form action="" method="post" class="search">
             <fieldset class="box api_url">
                 <legend>网易云音乐 API 地址</legend>
-                <input type="text" name="api_url" placeholder="API 服务器地址，需要带 http 前缀" value="<?php echo isset($_POST['api_url']) ? $_POST['api_url'] : '' ?>">
+                <input type="text" name="api_url" placeholder="需要带 http:// 或 https:// 前缀" value="<?php echo isset($_POST['api_url']) ? $_POST['api_url'] : '' ?>">
             </fieldset>
             <fieldset class="box opencc_path">
                 <legend>OpenCC 设置</legend>
                 <input type="radio" name="opencc" value="opencc_on" <?php if(!isset($_POST['opencc']) || $_POST['opencc'] == 'opencc_on') echo 'checked="checked"'; ?>>启用
                 <input type="radio" name="opencc" value="opencc_off" <?php if(isset($_POST['opencc']) && $_POST['opencc'] == 'opencc_off') echo 'checked="checked"'; ?>>不启用
-                <input type="text" name="opencc_path" placeholder="如果为 Linux 或 Unix 则无需输入路径，默认为：t2s.json <-|-> 如果为 windows 系统则需手动指定 OpenCC json 的绝对路径，使用的 json 为：t2s.json，例如：D:/opencc/t2s.json" value="<?php echo isset($_POST['opencc_path']) ? $_POST['opencc_path'] : ''; ?>">
+                <input type="text" name="opencc_s2t" style="margin: 5px 0;" placeholder="简转繁：如果为 Linux、Unix 系统则无需输入路径，默认为：s2t.json          如果为 windows 系统则需手动指定 OpenCC json 的绝对路径，例如：D:/opencc/s2t.json" value="<?php echo isset($_POST['opencc_s2t']) ? $_POST['opencc_s2t'] : ''; ?>">
+                <input type="text" name="opencc_t2s" placeholder="繁转简：如果为 Linux、Unix 系统则无需输入路径，默认为：t2s.json          如果为 windows 系统则需手动指定 OpenCC json 的绝对路径，例如：D:/opencc/t2s.json" value="<?php echo isset($_POST['opencc_t2s']) ? $_POST['opencc_t2s'] : ''; ?>">
             </fieldset>
             <fieldset class="box search_ipt">
-                <legend>音乐文件夹路径</legend>
-                <input type="text" name="path" placeholder="请输入歌曲文件夹绝对路径，例如：D:/music/" value="<?php echo isset($_POST['path']) ? $_POST['path'] : ''; ?>">
+                <legend>音乐文件夹绝对路径</legend>
+                <input type="text" name="path" placeholder="例如：D:/music/" value="<?php echo isset($_POST['path']) ? $_POST['path'] : ''; ?>">
             </fieldset>
             <fieldset class="box search_precision">
                 <legend>匹配精度</legend>
@@ -118,7 +119,7 @@ if (!isset($_POST['api_url']) || $_POST['api_url'] == null) {
 if (!isset($_POST['path']) || $_POST['path'] == null) {
     die('<p style="color:#fff;background:#ca0000;margin: 5px;padding: 5px;text-align: center;">路径不能为空</p>');
 }
-if (!isset($_POST['opencc_path']) || !isset($_POST['opencc']) || $_POST['opencc'] == null) {
+if (!isset($_POST['opencc_s2t']) || !isset($_POST['opencc_t2s']) || !isset($_POST['opencc']) || $_POST['opencc'] == null) {
     die('<p style="color:#fff;background:#ca0000;margin: 5px;padding: 5px;text-align: center;">OpenCC 参数错误</p>');
 }
 if (!isset($_POST['music_name_precision']) || !isset($_POST['artist_precision']) || !isset($_POST['duration_precision']) || !isset($_POST['style']) || $_POST['style'] == null || !isset($_POST['overwrite']) || $_POST['overwrite'] == null || !isset($_POST['opencc']) || $_POST['opencc'] == null || !isset($_POST['debug']) || $_POST['debug'] == null) {
@@ -150,8 +151,10 @@ if (preg_match("/Mac/i", $_SERVER['HTTP_USER_AGENT'])) {
         // 音乐文件夹路径格式化
         $path = str_replace("\\","",$path);
         // OpenCC 路径格式化
-        $op_path = $_POST['opencc_path'] != null ? trim($_POST['opencc_path']) : 't2s.json';
-        $op_path = str_replace("\\","",$op_path);
+        $oc_s2t_path = $_POST['opencc_s2t'] != null ? trim($_POST['opencc_s2t']) : 's2t.json';
+        $oc_s2t_path = str_replace("\\","",$oc_s2t_path);
+        $oc_t2s_path = $_POST['opencc_t2s'] != null ? trim($_POST['opencc_t2s']) : 't2s.json';
+        $oc_t2s_path = str_replace("\\","",$oc_t2s_path);
     }
 } else {
     // windows 路径转换
@@ -159,8 +162,10 @@ if (preg_match("/Mac/i", $_SERVER['HTTP_USER_AGENT'])) {
         // 音乐文件夹路径格式化
         $path = str_replace("\\","/",$path);
         // OpenCC 路径格式化
-        $op_path = $_POST['opencc_path'] != null ? trim($_POST['opencc_path']) : 't2s.json';
-        $op_path = str_replace("\\","/",$op_path);
+        $oc_s2t_path = $_POST['opencc_s2t'] != null ? trim($_POST['opencc_s2t']) : 's2t.json';
+        $oc_s2t_path = str_replace("\\","/",$oc_s2t_path);
+        $oc_t2s_path = $_POST['opencc_t2s'] != null ? trim($_POST['opencc_t2s']) : 't2s.json';
+        $oc_t2s_path = str_replace("\\","/",$oc_t2s_path);
     }
 }
 
@@ -178,8 +183,11 @@ $getID3 = new getID3();
 
 // 调用 OpenCC 进行繁体转简体
 if ($_POST['opencc'] == 'opencc_on') {
-    if (!$oc = opencc_open($op_path)) {
-        die('<p style="color:#fff;background:#ca0000;margin: 5px;padding: 5px;text-align: center;">OpenCC 调用异常</p>');
+    if (!$oc_s2t = opencc_open($oc_s2t_path)) {
+        die('<p style="color:#fff;background:#ca0000;margin: 5px;padding: 5px;text-align: center;">OpenCC(s2t.json) 调用异常</p>');
+    }
+    if (!$oc_t2s = opencc_open($oc_t2s_path)) {
+        die('<p style="color:#fff;background:#ca0000;margin: 5px;padding: 5px;text-align: center;">OpenCC(t2s.json) 调用异常</p>');
     }
 }
 
@@ -190,6 +198,7 @@ $duration_precision = $_POST['duration_precision'] == null ? 5 : ((int)$_POST['d
 
 // 开始运行！！！
 for($i = 0;$i < count($dir);$i++) {
+    // 文件不为音乐时跳过
     if (!preg_match("/flac|wav|mp3/i", substr($dir[$i], -4))) {
         continue;
     }
@@ -197,8 +206,28 @@ for($i = 0;$i < count($dir);$i++) {
     if (in_array(preg_split("/.(?=[^.]*$)/", $dir[$i])[0] . '.lrc', $dir) && $_POST['overwrite'] == 'ow_n') {
         continue;
     }
-    $search_flag = 1;
-    $FileInfo = $getID3->analyze($path . $dir[$i]);
+    app($dir[$i], $getID3, $path, $oc_s2t, $oc_t2s, $api_url, $music_name_precision, $artist_precision, $duration_precision);
+}
+
+// OpenCC 调用结束，关闭
+if ($_POST['opencc'] == 'opencc_on') {
+    opencc_close($oc_s2t);
+    opencc_close($oc_t2s);
+}
+
+/**
+ * @param $device_file_name 音乐文件名
+ * @param $getID3 getID3
+ * @param $path 歌曲路径
+ * @param $oc_s2t OpenCC 简转繁
+ * @param $oc_t2s OpenCC 繁转简
+ * @param $api_url API URL
+ * @param $music_name_precision 歌曲名精度
+ * @param $artist_precision 艺术家名精度
+ * @param $duration_precision 歌曲时长精度
+ */
+function app($device_file_name, $getID3, $path, $oc_s2t, $oc_t2s, $api_url, $music_name_precision, $artist_precision, $duration_precision) {
+    $FileInfo = $getID3->analyze($path . $device_file_name);
     $duration = floor($FileInfo['playtime_seconds']);
     $type = $FileInfo['audio']['dataformat'];
     $file_path = $FileInfo['filepath'];
@@ -221,21 +250,23 @@ for($i = 0;$i < count($dir);$i++) {
     }
     $album = isset($album) ? $album : '';
     $artist = isset($artist) ? $artist : '';
-    $opencc_tr = $_POST['opencc'] == 'opencc_on' ? opencc_convert($music_name, $oc) : '';
-    $data_1 = musicKeywordApi($api_url, urlencode(trim($music_name . ' ' . $album)));
-    $data_2 = musicKeywordApi($api_url, urlencode($music_name));
+    $opencc_s2t = $_POST['opencc'] == 'opencc_on' ? opencc_convert($music_name, $oc_s2t) : '';
+    $opencc_t2s = $_POST['opencc'] == 'opencc_on' ? opencc_convert($music_name, $oc_t2s) : '';
+    $data_1 = musicKeywordsApi($api_url, urlencode($music_name));
+    $data_2 = musicKeywordsApi($api_url, urlencode($artist));
+    $data_3 = musicKeywordsApi($api_url, urlencode(trim($music_name . ' ' . $album)));
     if (matchMusic($data_1, $artist, $music_name, $duration, $api_url, $file_path, $file_name, $music_name_precision, $artist_precision, $duration_precision, $_POST['debug'])) {
     } elseif (matchMusic($data_2, $artist, $music_name, $duration, $api_url, $file_path, $file_name, $music_name_precision, $artist_precision, $duration_precision, $_POST['debug'])) {
-    } elseif (matchMusic($data_1, $artist, $opencc_tr, $duration, $api_url, $file_path, $file_name, $music_name_precision, $artist_precision, $duration_precision, $_POST['debug'])) {
-    } elseif (matchMusic($data_2, $artist, $opencc_tr, $duration, $api_url, $file_path, $file_name, $music_name_precision, $artist_precision, $duration_precision, $_POST['debug'])) {
+    } elseif (matchMusic($data_3, $artist, $music_name, $duration, $api_url, $file_path, $file_name, $music_name_precision, $artist_precision, $duration_precision, $_POST['debug'])) {
+    } elseif (matchMusic($data_1, $artist, $opencc_s2t, $duration, $api_url, $file_path, $file_name, $music_name_precision, $artist_precision, $duration_precision, $_POST['debug'])) {
+    } elseif (matchMusic($data_2, $artist, $opencc_s2t, $duration, $api_url, $file_path, $file_name, $music_name_precision, $artist_precision, $duration_precision, $_POST['debug'])) {
+    } elseif (matchMusic($data_3, $artist, $opencc_s2t, $duration, $api_url, $file_path, $file_name, $music_name_precision, $artist_precision, $duration_precision, $_POST['debug'])) {
+    } elseif (matchMusic($data_1, $artist, $opencc_t2s, $duration, $api_url, $file_path, $file_name, $music_name_precision, $artist_precision, $duration_precision, $_POST['debug'])) {
+    } elseif (matchMusic($data_2, $artist, $opencc_t2s, $duration, $api_url, $file_path, $file_name, $music_name_precision, $artist_precision, $duration_precision, $_POST['debug'])) {
+    } elseif (matchMusic($data_3, $artist, $opencc_t2s, $duration, $api_url, $file_path, $file_name, $music_name_precision, $artist_precision, $duration_precision, $_POST['debug'])) {
     } else {
         echo '<p style="color:#fff;background:#ca0000;margin: 5px;padding: 5px;">歌词生成失败（无匹配项）：' . preg_split("/.(?=[^.]*$)/", $file_name)[0] . '.lrc</p>';
     }
-}
-
-// OpenCC 调用结束，关闭
-if ($_POST['opencc'] == 'opencc_on') {
-    opencc_close($oc);
 }
 
 /**
@@ -352,7 +383,7 @@ function cleanAdd_2($str, $t_str) {
  * @param $method 歌曲关键字
  * @return string 从 API 获取到的结果
  */
-function musicKeywordApi($url, $method) {
+function musicKeywordsApi($url, $method) {
     $url = $url.'/search?keywords='.$method;
     if (!$data = json_decode(file_get_contents($url))) {
         die('<p style="color:#fff;background:#ca0000;margin: 5px;padding: 5px;">API Error</p>');
