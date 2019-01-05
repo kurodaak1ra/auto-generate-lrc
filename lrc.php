@@ -17,7 +17,7 @@ if (preg_match("/Android|iPhone|IOS/i", $_SERVER['HTTP_USER_AGENT'])) {
     <meta name="renderer" content="webkit">
     <meta http-equiv="X-UA-Compatible" content="IE=Edge">
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-    <title>歌词批量生成脚本</title>
+    <title>网易云音乐 - 歌词批量生成脚本</title>
     <style>
         * {
             margin: 0;
@@ -246,6 +246,26 @@ function app($device_file_name, $getID3, $path, $oc_s2t, $oc_t2s, $api_url, $mus
     if (!isset($music_name) || $music_name == null) {
         $music_name = preg_split("/.(?=[^.]*$)/", $file_name)[0];
         $music_name = explode('.', $music_name)[1];
+        $Special_characters = [
+            '【' => '',
+            '】' => '',
+            '〖' => '',
+            '〗' => '',
+            '「' => '',
+            '」' => '',
+            '『' => '',
+            '』' => '',
+            '（' => '',
+            '）' => '',
+            '(' => '',
+            ')' => '',
+            '/' => '',
+            '-' => ''
+        ];
+        $pattern = '【|】|〖|〗|「|」|『|』|（|）|(|)|\/';
+        if (preg_match( '/'.$pattern.'/i', $music_name)) {
+            $music_name = strtr($music_name,$Special_characters);
+        }
         $music_name = trim($music_name);
     }
     $album = isset($album) ? $album : '';
@@ -383,10 +403,10 @@ function cleanAdd_2($str, $t_str) {
  * @param $method 歌曲关键字
  * @return string 从 API 获取到的结果
  */
-function musicKeywordsApi($url, $method) {
-    $url = $url.'/search?keywords='.$method;
+function musicKeywordsApi($url, $keywords) {
+    $url = $url.'/search?keywords='.$keywords;
     if (!$data = json_decode(file_get_contents($url))) {
-        die('<p style="color:#fff;background:#ca0000;margin: 5px;padding: 5px;">API Error</p>');
+        // die('<p style="color:#fff;background:#ca0000;margin: 5px;padding: 5px;">API Error</p>');
     }
     if ($data->code == 200 && $data->result->songCount != 0) {
         return $data->result;
@@ -430,38 +450,52 @@ function generateLrc($obj, $path, $file_name) {
     // 清除原歌词中多余废话
     $lrc = explode("\n", $obj['lrc']);
     $lrc_flag = 1;
-    for ($i = 0; $i < count($lrc); $i++) {
+    $count = count($lrc);
+    for ($i = 0; $i < $count; $i++) {
+        if (mb_substr($lrc[$i], 0, 1) != '[') {
+            $lrc[$i] = trim($lrc[$i]);
+            continue;
+        }
         $temp_str = mb_substr($lrc[$i], 1, 2);
-        $lrc_str = preg_split("/\](?=[^\]]*$)/", $lrc[$i]);
-        if (!is_numeric($temp_str) || preg_match("/:/i", $lrc_str[1]) || preg_match("/：/i", $lrc_str[1])) {
+        $lrc_clear = isset(preg_split("/\](?=[^\]]*$)/", $lrc[$i])[1]) ? trim(preg_split("/\](?=[^\]]*$)/", $lrc[$i])[1]) : '';
+        if (!is_numeric($temp_str) || preg_match("/:/i", $lrc_clear) || preg_match("/：/i", $lrc_clear)) {
             unset($lrc[$i]);
             continue;
-        } elseif ($lrc_str[1] == null && $lrc_flag) {
+        } elseif ($lrc_clear == null && $lrc_flag) {
             unset($lrc[$i]);
             continue;
-        } else {
+        } elseif ($lrc_flag) {
             $lrc_flag = 0;
         }
-        // 清空歌词首尾空格
-        $lrc[$i] = $lrc_str[0].']'.trim($lrc_str[1]);
+        // 修正时间轴并清空歌词首尾空格
+        preg_match("/^[^\]]*\]/", $lrc[$i], $lrc_str);
+        $lrc_str = strlen($lrc_str[0]) > 10 ? substr_replace($lrc_str[0], "", 9, 1) : $lrc_str[0];
+        $lrc[$i] = $lrc_str.$lrc_clear;
     }
     $lrc = array_values($lrc);  // 索引归零
 
     // 清除翻译中多余废话
     if (isset($obj['translrc'])) {
         $translrc = explode("\n", $obj['translrc']);
-        for ($i = 0; $i < count($translrc); $i++) {
+        $count = count($translrc);
+        for ($i = 0; $i < $count; $i++) {
+            if (mb_substr($translrc[$i], 0, 1) != '[') {
+                $translrc[$i] = trim($translrc[$i]);
+                continue;
+            }
             $temp_str = mb_substr($translrc[$i], 1, 2);
-            $lrc_str = preg_split("/\](?=[^\]]*$)/", $translrc[$i]);
-            if (!is_numeric($temp_str) || preg_match("/:/i", $lrc_str[1]) || preg_match("/：/i", $lrc_str[1])) {
+            $translrc_clear = isset(preg_split("/\](?=[^\]]*$)/", $translrc[$i])[1]) ? trim(preg_split("/\](?=[^\]]*$)/", $translrc[$i])[1]) : '';
+            if (!is_numeric($temp_str) || preg_match("/:/i", $translrc_clear) || preg_match("/：/i", $translrc_clear)) {
                 unset($translrc[$i]);
                 continue;
-            } elseif ($lrc_str[1] == null) {
+            } elseif ($translrc_clear == null) {
                 unset($translrc[$i]);
                 continue;
             }
-            // 清空歌词首尾空格
-            $translrc[$i] = $lrc_str[0].']'.trim($lrc_str[1]);
+            // 修正时间轴并清空歌词首尾空格
+            preg_match("/^[^\]]*\]/", $translrc[$i], $translrc_str);
+            $translrc_str = strlen($translrc_str[0]) > 10 ? substr_replace($translrc_str[0], "", 9, 1) : $translrc_str[0];
+            $translrc[$i] = $translrc_str.$translrc_clear;
         }
         $translrc = array_values($translrc);  // 索引归零
     }
@@ -509,7 +543,7 @@ function generateLrc($obj, $path, $file_name) {
             for ($i = 0;$i < count($lrc);$i++) {
                 if ($lrc[$i] != null) {
                     $lrc_temp = mb_substr($lrc[$i],1,8);
-                    array_push($final_lrc, trim($lrc[$i])."\n");
+                    array_push($final_lrc, $lrc[$i])."\n";
                 }
                 for ($j = 0;$j < count($translrc);$j++) {
                     if ($translrc[$j] != null) {
