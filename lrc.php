@@ -65,6 +65,40 @@ if (preg_match("/Android|iPhone|IOS/i", $_SERVER['HTTP_USER_AGENT'])) {
             -moz-border-radius: 6px;
             border-radius: 6px;
         }
+        .tips {
+            display: none;
+            color: #fff;
+            width: 300px;
+            height: 125px;
+            background: #000;
+            font-size: 20px;
+            font-weight: bold;
+            text-align: center;
+            line-height: 125px;
+            -webkit-border-radius: 8px;
+            -moz-border-radius: 8px;
+            border-radius: 8px;
+            position: fixed;
+            top: 35%;
+            left: 50%;
+            margin-left: -150px;
+        }
+        .go_top {
+            color: #fff;
+            width: 70px;
+            height: 70px;
+            background: #000;
+            position: fixed;
+            right: 10px;
+            bottom: 10px;
+            text-align: center;
+            line-height: 70px;
+            font-weight: bold;
+            text-decoration: none;
+            -webkit-border-radius: 50%;
+            -moz-border-radius: 50%;
+            border-radius: 50%;
+        }
     </style>
     <bady>
         <form action="" method="post" class="search">
@@ -85,9 +119,9 @@ if (preg_match("/Android|iPhone|IOS/i", $_SERVER['HTTP_USER_AGENT'])) {
             </fieldset>
             <fieldset class="box search_precision">
                 <legend>匹配精度</legend>
-                <input type="text" name="music_name_precision" maxlength="3" value="<?php echo isset($_POST['music_name_precision']) ? $_POST['music_name_precision'] : '' ?>" placeholder="歌曲名字，默认：80（0 ~ 100，单位为%）">
-                <input type="text" name="artist_precision" maxlength="3" value="<?php echo isset($_POST['artist_precision']) ? $_POST['artist_precision'] : '' ?>" placeholder="艺术家名字，默认：80（0 ~ 100，单位为%）">
-                <input type="text" name="duration_precision" maxlength="2" value="<?php echo isset($_POST['duration_precision']) ? $_POST['duration_precision'] : '' ?>" placeholder="歌曲时长偏移量，默认：正负5（0 ~ 30，单位为s）">
+                <input type="text" name="music_name_precision" maxlength="3" placeholder="歌曲名字，默认：80（0 ~ 100，单位为%）">
+                <input type="text" name="artist_precision" maxlength="3" placeholder="艺术家名字，默认：80（0 ~ 100，单位为%）">
+                <input type="text" name="duration_precision" maxlength="2" placeholder="歌曲时长偏移量，默认：正负5（0 ~ 30，单位为s）">
             </fieldset>
             <fieldset class="box lyric_style">
                 <legend>歌词样式</legend>
@@ -96,16 +130,48 @@ if (preg_match("/Android|iPhone|IOS/i", $_SERVER['HTTP_USER_AGENT'])) {
             </fieldset>
             <fieldset class="box overwrite_already_exists_lyric">
                 <legend>是否覆盖已有歌词</legend>
-                <input type="radio" name="overwrite" value="ow_y" <?php if(isset($_POST['overwrite']) && $_POST['overwrite'] == 'ow_y') echo 'checked="checked"'; ?>>是
-                <input type="radio" name="overwrite" value="ow_n" <?php if(!isset($_POST['overwrite']) || $_POST['overwrite'] == 'ow_n') echo 'checked="checked"'; ?>>否
+                <input type="radio" name="overwrite" value="ow_y">是
+                <input type="radio" name="overwrite" value="ow_n" checked="checked">否
             </fieldset>
             <fieldset class="box debug">
                 <legend>显示详细的匹配信息</legend>
-                <input type="radio" name="debug" value="1" <?php if(isset($_POST['debug']) && $_POST['debug'] == '1') echo 'checked="checked"'; ?>>开启
-                <input type="radio" name="debug" value="0" <?php if(!isset($_POST['debug']) || $_POST['debug'] == '0') echo 'checked="checked"'; ?>>关闭
+                <input type="radio" name="debug" value="1">开启
+                <input type="radio" name="debug" value="0" checked="checked">关闭
             </fieldset>
             <input type="submit" name="make" value="生成 LRC 歌词" class="submit">
+            <script>
+                window.onload = function () {
+                    var submit = document.getElementsByClassName('submit')[0];
+                    var tips = document.getElementsByClassName('tips')[0];
+                    var flag = true;
+                    var count = 0;
+                    submit.onclick = function () {
+                        if (flag) {
+                            setTimeout(function () {
+                                tips.style.display = 'block';
+                                tips.innerHTML = '歌词匹配生成中';
+                                setInterval(function () {
+                                    count++;
+                                    if (count == 1) {
+                                        tips.innerHTML = '歌词匹配生成中。';
+                                    } else if (count == 2) {
+                                        tips.innerHTML = '歌词匹配生成中。。';
+                                    } else if (count == 3) {
+                                        tips.innerHTML = '歌词匹配生成中。。。';
+                                    } else if (count == 4) {
+                                        tips.innerHTML = '歌词匹配生成中';
+                                        count = 0;
+                                    }
+                                }, 1000)
+                            }, 500)
+                        }
+                        flag = false;
+                    }
+                }
+            </script>
         </form>
+        <div class="tips"></div>
+        <a href="#" class="go_top">回顶部</a>
     </bady>
 </head>
 <?php
@@ -234,13 +300,15 @@ function app($device_file_name, $getID3, $path, $oc_s2t, $oc_t2s, $api_url, $mus
     $file_name = $FileInfo['filename'];
     if (isset($FileInfo['tags'])) {
         if ($type == 'flac') {
-            $music_name = $FileInfo['tags']['vorbiscomment']['title'][0];
-            $album = $FileInfo['tags']['vorbiscomment']['album'][0];
-            $artist = $FileInfo['tags']['vorbiscomment']['artist'][0];
+            $music_name = isset($FileInfo['tags']['vorbiscomment']['title'][0]) ? $FileInfo['tags']['vorbiscomment']['title'][0] : '';
+            $artist = isset($FileInfo['tags']['vorbiscomment']['artist'][0]) ? $FileInfo['tags']['vorbiscomment']['artist'][0] : '';
+            $album = isset($FileInfo['tags']['vorbiscomment']['album'][0]) ? $FileInfo['tags']['vorbiscomment']['album'][0] : '';
+            $albumartist = isset($FileInfo['tags']['vorbiscomment']['albumartist'][0]) ? $FileInfo['tags']['vorbiscomment']['albumartist'][0] : '';
         } elseif ($type == 'wav' || $type == 'mp3') {
-            $music_name = $FileInfo['tags']['id3v2']['title'][0];
-            $album = $FileInfo['tags']['id3v2']['album'][0];
-            $artist = $FileInfo['tags']['id3v2']['artist'][0];
+            $music_name = isset($FileInfo['tags']['id3v2']['title'][0]) ? $FileInfo['tags']['id3v2']['title'][0] : '';
+            $artist = isset($FileInfo['tags']['id3v2']['artist'][0]) ? $FileInfo['tags']['id3v2']['artist'][0] : '';
+            $album = isset($FileInfo['tags']['id3v2']['album'][0]) ? $FileInfo['tags']['id3v2']['album'][0] : '';
+            $albumartist = isset($FileInfo['tags']['id3v2']['albumartist'][0]) ? $FileInfo['tags']['id3v2']['albumartist'][0] : '';
         }
     }
     if (!isset($music_name) || $music_name == null) {
@@ -272,18 +340,20 @@ function app($device_file_name, $getID3, $path, $oc_s2t, $oc_t2s, $api_url, $mus
     $artist = isset($artist) ? $artist : '';
     $opencc_s2t = $_POST['opencc'] == 'opencc_on' ? opencc_convert($music_name, $oc_s2t) : '';
     $opencc_t2s = $_POST['opencc'] == 'opencc_on' ? opencc_convert($music_name, $oc_t2s) : '';
-    $data_1 = musicKeywordsApi($api_url, urlencode($music_name));
-    $data_2 = musicKeywordsApi($api_url, urlencode($artist));
-    $data_3 = musicKeywordsApi($api_url, urlencode(trim($music_name . ' ' . $album)));
+    $data_1 = musicKeywordsApi($api_url, urlencode(trim($album . ' ' . $albumartist)));
+    $data_2 = musicKeywordsApi($api_url, urlencode($music_name));
+    $data_3 = musicKeywordsApi($api_url, urlencode($artist));
+    $data_4 = musicKeywordsApi($api_url, urlencode(trim($music_name . ' ' . $album)));
     if (matchMusic($data_1, $artist, $music_name, $duration, $api_url, $file_path, $file_name, $music_name_precision, $artist_precision, $duration_precision, $_POST['debug'])) {
     } elseif (matchMusic($data_2, $artist, $music_name, $duration, $api_url, $file_path, $file_name, $music_name_precision, $artist_precision, $duration_precision, $_POST['debug'])) {
     } elseif (matchMusic($data_3, $artist, $music_name, $duration, $api_url, $file_path, $file_name, $music_name_precision, $artist_precision, $duration_precision, $_POST['debug'])) {
-    } elseif (matchMusic($data_1, $artist, $opencc_s2t, $duration, $api_url, $file_path, $file_name, $music_name_precision, $artist_precision, $duration_precision, $_POST['debug'])) {
+    } elseif (matchMusic($data_4, $artist, $music_name, $duration, $api_url, $file_path, $file_name, $music_name_precision, $artist_precision, $duration_precision, $_POST['debug'])) {
     } elseif (matchMusic($data_2, $artist, $opencc_s2t, $duration, $api_url, $file_path, $file_name, $music_name_precision, $artist_precision, $duration_precision, $_POST['debug'])) {
     } elseif (matchMusic($data_3, $artist, $opencc_s2t, $duration, $api_url, $file_path, $file_name, $music_name_precision, $artist_precision, $duration_precision, $_POST['debug'])) {
-    } elseif (matchMusic($data_1, $artist, $opencc_t2s, $duration, $api_url, $file_path, $file_name, $music_name_precision, $artist_precision, $duration_precision, $_POST['debug'])) {
+    } elseif (matchMusic($data_4, $artist, $opencc_s2t, $duration, $api_url, $file_path, $file_name, $music_name_precision, $artist_precision, $duration_precision, $_POST['debug'])) {
     } elseif (matchMusic($data_2, $artist, $opencc_t2s, $duration, $api_url, $file_path, $file_name, $music_name_precision, $artist_precision, $duration_precision, $_POST['debug'])) {
     } elseif (matchMusic($data_3, $artist, $opencc_t2s, $duration, $api_url, $file_path, $file_name, $music_name_precision, $artist_precision, $duration_precision, $_POST['debug'])) {
+    } elseif (matchMusic($data_4, $artist, $opencc_t2s, $duration, $api_url, $file_path, $file_name, $music_name_precision, $artist_precision, $duration_precision, $_POST['debug'])) {
     } else {
         echo '<p style="color:#fff;background:#ca0000;margin: 5px;padding: 5px;">歌词生成失败（无匹配项）：' . preg_split("/.(?=[^.]*$)/", $file_name)[0] . '.lrc</p>';
     }
@@ -303,19 +373,21 @@ function matchMusic($data, $artist, $music_name, $duration, $url, $path, $file_n
     }
     $song = $data->songs;
     for ($i = 0;$i < count($song);$i++) {
+        $api_music_id = $song[$i]->artists[0]->id;
         $api_music_artist = $song[$i]->artists[0]->name;
         $api_music_name = $song[$i]->name;
         $api_music_id = $song[$i]->id;
         $api_music_duration = $song[$i]->duration;
         // 艺术家相似度
-        similar_text($api_music_artist, $artist, $similar_artist);
+        similar_text(strtolower($api_music_artist), strtolower($artist), $similar_artist);
         // 歌曲名相似度
-        similar_text($api_music_name, $music_name, $similar_music_name);
+        similar_text(strtolower($api_music_name), strtolower($music_name), $similar_music_name);
         // 歌曲时长相似度
         $api_duration = floor($api_music_duration/1000);
         // 详细的匹配信息
         if ($debug) {
             echo '<div style="margin: 5px;padding: 5px;border: 1px solid #999;">';
+            echo '<p style="font-size: 0.9em;line-height: 1.1em;"><span style="display: inline-block;width: 7em;">API歌曲ID：</span>'.$api_music_id.'</p>';
             echo '<p style="font-size: 0.9em;line-height: 1.1em;"><span style="display: inline-block;width: 7em;">本地歌曲名：</span>'.$music_name.'</p>';
             echo '<p style="font-size: 0.9em;line-height: 1.1em;"><span style="display: inline-block;width: 7em;">API歌曲名：</span>'.$api_music_name.'</p>';
             echo '<p style="font-size: 0.9em;line-height: 1.1em;"><span style="display: inline-block;width: 7em;">本地艺术家：</span>'.$artist.'</p>';
@@ -327,10 +399,7 @@ function matchMusic($data, $artist, $music_name, $duration, $url, $path, $file_n
             echo '</div>';
         }
         // 匹配判断
-        if ($similar_artist >= $artist_precision && $similar_music_name >= $music_name_precision) {
-            musicLrcApi($url, $api_music_id, $path, $file_name);
-            return 1;
-        } elseif ($similar_music_name >= $music_name_precision && $duration >= $api_duration - $duration_precision && $duration <= $api_duration + $duration_precision) {
+        if ($similar_music_name >= $music_name_precision && $similar_artist >= $artist_precision && $duration >= $api_duration - $duration_precision && $duration <= $api_duration + $duration_precision) {
             musicLrcApi($url, $api_music_id, $path, $file_name);
             return 1;
         }
