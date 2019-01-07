@@ -217,10 +217,15 @@ if (preg_match("/Mac/i", $_SERVER['HTTP_USER_AGENT'])) {
         // 音乐文件夹路径格式化
         $path = str_replace("\\","",$path);
         // OpenCC 路径格式化
-        $oc_s2t_path = $_POST['opencc_s2t'] != null ? trim($_POST['opencc_s2t']) : 's2t.json';
-        $oc_s2t_path = str_replace("\\","",$oc_s2t_path);
-        $oc_t2s_path = $_POST['opencc_t2s'] != null ? trim($_POST['opencc_t2s']) : 't2s.json';
-        $oc_t2s_path = str_replace("\\","",$oc_t2s_path);
+        if ($_POST['opencc'] == 'opencc_on') {
+            $oc_s2t_path = $_POST['opencc_s2t'] != null ? trim($_POST['opencc_s2t']) : 's2t.json';
+            $oc_s2t_path = str_replace("\\","",$oc_s2t_path);
+            $oc_t2s_path = $_POST['opencc_t2s'] != null ? trim($_POST['opencc_t2s']) : 't2s.json';
+            $oc_t2s_path = str_replace("\\","",$oc_t2s_path);
+        } else {
+            $oc_s2t_path = '';
+            $oc_t2s_path = '';
+        }
     }
 } else {
     // windows 路径转换
@@ -228,10 +233,15 @@ if (preg_match("/Mac/i", $_SERVER['HTTP_USER_AGENT'])) {
         // 音乐文件夹路径格式化
         $path = str_replace("\\","/",$path);
         // OpenCC 路径格式化
-        $oc_s2t_path = $_POST['opencc_s2t'] != null ? trim($_POST['opencc_s2t']) : 's2t.json';
-        $oc_s2t_path = str_replace("\\","/",$oc_s2t_path);
-        $oc_t2s_path = $_POST['opencc_t2s'] != null ? trim($_POST['opencc_t2s']) : 't2s.json';
-        $oc_t2s_path = str_replace("\\","/",$oc_t2s_path);
+        if ($_POST['opencc'] == 'opencc_on') {
+            $oc_s2t_path = $_POST['opencc_s2t'] != null ? trim($_POST['opencc_s2t']) : 's2t.json';
+            $oc_s2t_path = str_replace("\\","/",$oc_s2t_path);
+            $oc_t2s_path = $_POST['opencc_t2s'] != null ? trim($_POST['opencc_t2s']) : 't2s.json';
+            $oc_t2s_path = str_replace("\\","/",$oc_t2s_path);
+        } else {
+            $oc_s2t_path = null;
+            $oc_t2s_path = null;
+        }
     }
 }
 
@@ -255,6 +265,9 @@ if ($_POST['opencc'] == 'opencc_on') {
     if (!$oc_t2s = opencc_open($oc_t2s_path)) {
         die('<p style="color:#fff;background:#ca0000;margin: 5px;padding: 5px;text-align: center;">OpenCC(t2s.json) 调用异常</p>');
     }
+} else {
+    $oc_s2t = null;
+    $oc_t2s = null;
 }
 
 // 精度
@@ -338,8 +351,8 @@ function app($device_file_name, $getID3, $path, $oc_s2t, $oc_t2s, $api_url, $mus
     }
     $album = isset($album) ? $album : '';
     $artist = isset($artist) ? $artist : '';
-    $opencc_s2t = $_POST['opencc'] == 'opencc_on' ? opencc_convert($music_name, $oc_s2t) : '';
-    $opencc_t2s = $_POST['opencc'] == 'opencc_on' ? opencc_convert($music_name, $oc_t2s) : '';
+    $opencc_s2t = $_POST['opencc'] == 'opencc_on' ? opencc_convert($music_name, $oc_s2t) : null;
+    $opencc_t2s = $_POST['opencc'] == 'opencc_on' ? opencc_convert($music_name, $oc_t2s) : null;
     $data_1 = musicKeywordsApi($api_url, urlencode(trim($album . ' ' . $albumartist)));
     $data_2 = musicKeywordsApi($api_url, urlencode($music_name));
     $data_3 = musicKeywordsApi($api_url, urlencode($artist));
