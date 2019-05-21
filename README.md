@@ -40,5 +40,5 @@ https://github.com/NauxLiu/opencc4php/pull/16
 想看屁话少的教程本人网站有，不想请自行 百度、Google
 
 ### getID3
-http://getid3.sourceforge.net/<br>
+http://getid3.sourceforge.net/  
 下载后解压到和脚本同级目录，文件夹命名为：getid3（路径在脚本229行，有需要请自行修改）
